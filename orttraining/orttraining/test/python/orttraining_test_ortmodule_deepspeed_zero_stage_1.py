@@ -170,16 +170,16 @@ def main():
     dist.init_process_group(backend='nccl')
     if args.local_rank == 0:
         # download only once on rank 0
-        datasets.MNIST('./data', download=True)
+        datasets.MNIST('/mnist', download=True)
     dist.barrier()
-    train_set = datasets.MNIST('./data', train=True,
+    train_set = datasets.MNIST('/mnist', train=True,
                             transform=transforms.Compose([transforms.ToTensor(),
                                                         transforms.Normalize((0.1307,), (0.3081,))]))
 
     test_loader = None
     if args.test_batch_size > 0:
         test_loader = torch.utils.data.DataLoader(
-            datasets.MNIST('./data', train=False, transform=transforms.Compose([
+            datasets.MNIST('/mnist', train=False, transform=transforms.Compose([
                 transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])),
             batch_size=args.test_batch_size, shuffle=True)
 
