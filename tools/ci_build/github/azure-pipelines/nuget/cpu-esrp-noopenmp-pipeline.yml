@@ -19,6 +19,7 @@ parameters:
   type: boolean
   default: false
 
+jobs:
 - template: ../templates/c-api-cpu.yml
   parameters:
     RunOnnxRuntimeTests: ${{ parameters.RunOnnxRuntimeTests }}
