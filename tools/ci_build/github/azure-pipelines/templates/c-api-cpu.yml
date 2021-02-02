@@ -188,7 +188,7 @@ jobs:
     DoCompliance: ${{ parameters.DoCompliance }}
     DoEsrp: ${{ parameters.DoEsrp }}
     OrtNugetPackageId: 'Microsoft.ML.OnnxRuntime'
-    job_name_suffix: arm_openmp
+    job_name_suffix: arm64_openmp
     EnvSetupScript: setup_env.bat
     buildArch: x64
     msbuildPlatform: arm64
