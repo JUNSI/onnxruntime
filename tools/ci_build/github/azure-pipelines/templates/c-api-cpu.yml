@@ -154,7 +154,6 @@ jobs:
 
 - template: win-ci.yml
   parameters:
-    RunOnnxRuntimeTests: ${{ parameters.RunOnnxRuntimeTests }}        
     IsReleaseBuild: ${{ parameters.IsReleaseBuild }}
     DoCompliance: ${{ parameters.DoCompliance }}
     DoEsrp: ${{ parameters.DoEsrp }}
@@ -170,7 +169,6 @@ jobs:
 
 - template: win-ci.yml
   parameters:
-    RunOnnxRuntimeTests: ${{ parameters.RunOnnxRuntimeTests }}        
     IsReleaseBuild: ${{ parameters.IsReleaseBuild }}
     DoCompliance: ${{ parameters.DoCompliance }}
     DoEsrp: ${{ parameters.DoEsrp }}
@@ -186,7 +184,6 @@ jobs:
 
 - template: win-ci.yml
   parameters:
-    RunOnnxRuntimeTests: ${{ parameters.RunOnnxRuntimeTests }}        
     IsReleaseBuild: ${{ parameters.IsReleaseBuild }}
     DoCompliance: ${{ parameters.DoCompliance }}
     DoEsrp: ${{ parameters.DoEsrp }}
@@ -202,7 +199,6 @@ jobs:
 
 - template: win-ci.yml
   parameters:
-    RunOnnxRuntimeTests: ${{ parameters.RunOnnxRuntimeTests }}        
     IsReleaseBuild: ${{ parameters.IsReleaseBuild }}
     DoCompliance: ${{ parameters.DoCompliance }}
     DoEsrp: ${{ parameters.DoEsrp }}
