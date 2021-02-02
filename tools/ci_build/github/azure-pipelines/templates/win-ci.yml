@@ -119,7 +119,7 @@ jobs:
 
     - task: PythonScript@0
       displayName: 'test'
-      condition: and(succeeded(), eq(parameters.runTests, true))
+      condition: and(succeeded(), eq('${{ parameters.runTests}}', true))
       inputs:
         scriptPath: '$(Build.SourcesDirectory)\tools\ci_build\build.py'
         arguments: '--config RelWithDebInfo --enable_lto --disable_rtti --build_dir $(Build.BinariesDirectory) --skip_submodule_sync --build_shared_lib --test --cmake_generator "Visual Studio 16 2019"  --build_shared_lib --enable_onnx_tests --enable_wcos  --use_winml $(TelemetryOption) ${{ parameters.buildparameter }}'
@@ -141,7 +141,7 @@ jobs:
 
     #Upload protoc.exe, which will be used in nuget build for generating C# files
     - task: PublishPipelineArtifact@1
-      condition: and(succeeded(), eq(parameters.packageName, 'x64'))
+      condition: and(succeeded(), eq('${{ parameters.packageName}}', 'x64'))
       inputs:
         targetPath: '$(Build.BinariesDirectory)\RelWithDebInfo\external\protobuf\cmake\RelWithDebInfo\protoc.exe' 
         artifactName: 'drop-extra' 
@@ -149,7 +149,7 @@ jobs:
 
     - task: CopyFiles@2
       displayName: 'Copy custom_op_library to: $(Build.ArtifactStagingDirectory)'
-      condition: and(succeeded(), eq(parameters.packageName, 'x64'))
+      condition: and(succeeded(), eq('${{ parameters.packageName}}', 'x64'))
       inputs:
         SourceFolder: '$(Build.BinariesDirectory)\RelWithDebInfo\RelWithDebInfo'
         Contents: 'custom_op_library.dll'
@@ -157,14 +157,14 @@ jobs:
 
     #To be used in test_win.yml
     - task: PublishPipelineArtifact@1
-      condition: and(succeeded(), eq(parameters.packageName, 'x64'))
+      condition: and(succeeded(), eq('${{ parameters.packageName}}', 'x64'))
       inputs:
         targetPath: '$(Build.BinariesDirectory)\RelWithDebInfo\external\protobuf\cmake\RelWithDebInfo\protoc.exe' 
         artifactName: 'drop-nuget'
 
 
     - task: CmdLine@2
-      condition: and(succeeded(), eq(parameters.build_java, true))
+      condition: and(succeeded(), eq('${{ parameters.build_java}}', true))
       inputs:
         script: |
           @echo on
@@ -207,7 +207,7 @@ jobs:
         displayName: 'Add symbols and notices to Java'    
       
     - task: PublishBuildArtifacts@1
-      condition: and(succeeded(), eq(parameters.build_java, true))
+      condition: and(succeeded(), eq('${{ parameters.build_java}}', true))
       displayName: 'Publish Java temp binaries'
       inputs:
         pathtoPublish: '$(Build.BinariesDirectory)\onnxruntime-java-win-${{ parameters.msbuildPlatform }}' 
@@ -215,7 +215,7 @@ jobs:
 
     - ${{ if eq(parameters['DoCompliance'], 'true') }}:
       - task: Semmle@0
-        condition: and(succeeded(), eq(parameters.build_java, true))
+        condition: and(succeeded(), eq('${{ parameters.build_java}}', true))
         inputs:
           sourceCodeDirectory: '$(Build.SourcesDirectory)\java'
           language: 'java'
