@@ -59,11 +59,16 @@ parameters:
   type: string
   default: ''
 
+- name: ort_build_pool_name
+  displayName: job name for nuget
+  type: string
+  default: 'Win-CPU-2019'
+
 jobs:
 - job: Windows_Packaging_CPU_${{ parameters.job_name_suffix }}
   workspace:
     clean: all
-  pool: 'Win-CPU-2019'
+  pool: ${{ parameters.ort_build_pool_name }}
   timeoutInMinutes:  300  
   steps:
     - template: telemetry-steps.yml
@@ -211,7 +216,7 @@ jobs:
       displayName: 'Publish Java temp binaries'
       inputs:
         pathtoPublish: '$(Build.BinariesDirectory)\onnxruntime-java-win-${{ parameters.msbuildPlatform }}' 
-        artifactName: 'drop-onnxruntime-java-win-${{ parameters.msbuildPlatform }}'
+        artifactName: 'drop-onnxruntime-java-win-${{ parameters.packageName }}'
 
     - ${{ if eq(parameters['DoCompliance'], 'true') }}:
       - task: Semmle@0
