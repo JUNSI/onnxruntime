@@ -22,7 +22,7 @@ parameters:
 - name: AdditionalBuildFlags
   displayName: Additional build flags for build.py
   type: string
-  default: --use_openmp
+  default: ''
 
 - name: OrtNugetPackageId
   displayName: Package name for nuget

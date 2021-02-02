@@ -27,3 +27,4 @@ jobs:
     DoEsrp: ${{ parameters.DoEsrp }}
     IsReleaseBuild: ${{ parameters.IsReleaseBuild }}
     OrtNugetPackageId: 'Microsoft.ML.OnnxRuntime.NoOpenMP'
+    AdditionalBuildFlags: ''

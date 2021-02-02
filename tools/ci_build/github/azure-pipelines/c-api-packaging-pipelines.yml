@@ -27,6 +27,7 @@ jobs:
     DoEsrp: ${{ parameters.DoEsrp }}
     IsReleaseBuild: ${{ parameters.IsReleaseBuild }}
     OrtNugetPackageId: 'Microsoft.ML.OnnxRuntime'
+    AdditionalBuildFlags: '--use_openmp'
 
 - job: Linux_C_API_Packaging_GPU_x64
   workspace:
