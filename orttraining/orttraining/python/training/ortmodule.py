@@ -55,14 +55,18 @@ def _get_default_device_str(type):
     else:
         return 'cpu'
 
-def _create_iobinding(io_binding, inputs, model, device):
+def _create_iobinding(io_binding, inputs, kwargs, model, device):
     '''Creates IO binding for a `model` inputs and output'''
     for idx, value_info in enumerate(model.graph.input):
-        io_binding.bind_input(value_info.name, inputs[idx].device.type,
-                              _get_device_index(inputs[idx].device),
-                              _utils.dtype_torch_to_numpy(inputs[idx].dtype),
-                              list(inputs[idx].size()),
-                              inputs[idx].data_ptr())
+        if idx < len(inputs):
+            inp = inputs[idx]
+        else:
+            inp = kwargs[value_info.name]
+        io_binding.bind_input(value_info.name, inp.device.type,
+                              _get_device_index(inp.device),
+                              _utils.dtype_torch_to_numpy(inp.dtype),
+                              list(inp.size()),
+                              inp.data_ptr())
 
     for value_info in model.graph.output:
         io_binding.bind_output(value_info.name, device.type,
@@ -195,8 +199,11 @@ class ORTModule(torch.nn.Module):
             if self._save_onnx:
                 onnx.save(self._onnx_training, self._save_onnx_prefix + '_full_training.onnx')
 
-        # Perform shape inference and re-split forward/backward graph for bacthes with different shapes
+        # Perform shape inference and re-split forward/backward graph for batches with different shapes
         new_input_shape = [list(input.size()) for input in inputs if input is not None]
+        for k, v in kwargs.items():
+            if v is not None:
+                new_input_shape.append(list(v.size()))
         if self._current_input_shape is None or self._current_input_shape != new_input_shape:
             self._current_input_shape = new_input_shape
             self._module_gradient_graph_builder.build_and_split(self._current_input_shape)
@@ -235,8 +242,6 @@ class ORTModule(torch.nn.Module):
             def forward(ctx, *inputs, **kwargs):
                 '''Performs forward pass based on user input and PyTorch initializer
 
-                TODO: **kwargs are not supported
-
                 Model outputs are returned to the user
                 The following tensors are stashed (in order) for backward pass
                     * (Partial) user input
@@ -245,7 +250,7 @@ class ORTModule(torch.nn.Module):
                 '''
 
                 # Use IO binding
-                _create_iobinding(self._forward_io_binding, inputs,
+                _create_iobinding(self._forward_io_binding, inputs, kwargs,
                                   self._onnx_forward,
                                   self._device)
 
@@ -254,7 +259,7 @@ class ORTModule(torch.nn.Module):
                 forward_outputs = self._forward_io_binding.get_outputs()
 
                 # Stash tensors needed by backward
-                forward_input_dict = self._convert_forward_input_list_to_dict(*inputs)
+                forward_input_dict = self._convert_forward_inputs_to_dict(inputs, kwargs)
                 ctx_inputs = tuple(forward_input_dict[name] \
                     for name in self._onnx_graphs_info.backward_user_input_names)
                 ctx_initializers = tuple(forward_input_dict[name] \
@@ -303,7 +308,6 @@ class ORTModule(torch.nn.Module):
     def _convert_forward_input_to_list(self, *inputs, **kwargs):
         '''Creates forward `*inputs` list from user input and PyTorch initializers
 
-        TODO: **kwargs is not supported
         TODO: How IO binding model inputs and outputs affects initializer copies?
 
         ONNX Runtime forward requires an order list of:
@@ -315,6 +319,10 @@ class ORTModule(torch.nn.Module):
         '''
         # User inputs
         result = list(inputs[:len(self._onnx_graphs_info.user_input_names)])
+        for i in range(len(self._onnx_graphs_info.user_input_names)):
+            input_name = self._onnx_graphs_info.user_input_names[i]
+            if input_name in kwargs and kwargs[input_name] is not None:
+                result.append(kwargs[input_name])
 
         # Initializers
         for param in self._original_module.named_parameters():
@@ -323,15 +331,21 @@ class ORTModule(torch.nn.Module):
         return result
 
     @_utils.timeit(enabled=__TEMP_ENABLE_METHOD_TIMING__)
-    def _convert_forward_input_list_to_dict(self, *inputs):
-        '''Convert forward `*inputs` list to dict
+    def _convert_forward_inputs_to_dict(self, inputs, kwargs):
+        '''Convert forward inputs to dict
 
         TODO: Input gradient is being ignored for MVP
         '''
         # Dictionary containing both inputs and initializers
         forward_input_names = [*self._onnx_graphs_info.user_input_names,
                                *self._onnx_graphs_info.initializer_names_to_train]
-        return dict(zip(forward_input_names, inputs))
+        inputs_dict = {}
+        for i in range(len(inputs)):
+            inputs_dict[forward_input_names[i]] = inputs[i]
+        for k, v in kwargs.items():
+            if k in forward_input_names:
+                inputs_dict[k] = v
+        return inputs_dict
 
     @_utils.timeit(enabled=__TEMP_ENABLE_METHOD_TIMING__)
     def _convert_backward_input_list_to_dict(self, *inputs):
@@ -404,7 +418,7 @@ class ORTModule(torch.nn.Module):
                 input_names.append(name)
                 dynamic_axes[name] = {}
                 for dim_idx in range(len(inputs[input_idx].shape)):
-                    dynamic_axes[name].update({dim_idx : f'input{input_idx}_dim{dim_idx}'})
+                    dynamic_axes[name].update({dim_idx : f'input_{name}_dim{dim_idx}'})
             if name in kwargs and kwargs[name] is not None:
                 input_names.append(name)
                 dynamic_axes[name] = {}
