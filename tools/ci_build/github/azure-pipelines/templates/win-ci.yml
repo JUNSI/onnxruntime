@@ -82,7 +82,7 @@ jobs:
     - task: BatchScript@1
       displayName: 'setup env'
       inputs:
-        filename: '$(Build.SourcesDirectory)\tools\ci_build\github\windows\$(EnvSetupScript)'
+        filename: '$(Build.SourcesDirectory)\tools\ci_build\github\windows\${{ parameters.EnvSetupScript }}'
         modifyEnvironment: true
         workingFolder: '$(Build.BinariesDirectory)'
 
