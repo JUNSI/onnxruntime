@@ -403,8 +403,6 @@ class ORTModule(torch.nn.Module):
         # Export the model to memory
         f = io.BytesIO()
 
-        ff = open("model-" + str(inputs) + str(kwargs) + ".onnx", mode="w+b")
-
         # Deepcopy inputs, since input values may change after model run.
         sample_inputs_copy = copy.deepcopy(inputs)
 
@@ -438,15 +436,5 @@ class ORTModule(torch.nn.Module):
                           do_constant_folding=False,
                           training=torch.onnx.TrainingMode.TRAINING,
                           dynamic_axes=dynamic_axes)
-
-        torch.onnx.export(module,
-                          tuple(sample_inputs_copy + (kwargs, )),
-                          ff,
-                          input_names=input_names,
-                          opset_version=ONNX_OPSET_VERSION,
-                          do_constant_folding=False,
-                          training=torch.onnx.TrainingMode.TRAINING,
-                          dynamic_axes=dynamic_axes)
-        ff.close()
 
         return onnx.load_model_from_string(f.getvalue())
