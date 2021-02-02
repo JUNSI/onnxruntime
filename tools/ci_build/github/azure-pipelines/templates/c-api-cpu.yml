@@ -157,13 +157,13 @@ jobs:
     IsReleaseBuild: ${{ parameters.IsReleaseBuild }}
     DoCompliance: ${{ parameters.DoCompliance }}
     DoEsrp: ${{ parameters.DoEsrp }}
-    OrtNugetPackageId: 'Microsoft.ML.OnnxRuntime'
+    OrtNugetPackageId: ${{ parameters.OrtNugetPackageId }}
     job_name_suffix: x86_openmp
     EnvSetupScript: setup_env_x86.bat
     buildArch: x86
     msbuildPlatform: Win32
     packageName: x86
-    buildparameter: --x86 --use_openmp
+    buildparameter: --x86 ${{ parameters.AdditionalBuildFlags }}
     runTests: ${{ parameters.RunOnnxRuntimeTests }}
     build_java: false
 
@@ -172,13 +172,13 @@ jobs:
     IsReleaseBuild: ${{ parameters.IsReleaseBuild }}
     DoCompliance: ${{ parameters.DoCompliance }}
     DoEsrp: ${{ parameters.DoEsrp }}
-    OrtNugetPackageId: 'Microsoft.ML.OnnxRuntime'
+    OrtNugetPackageId: ${{ parameters.OrtNugetPackageId }}
     job_name_suffix: arm_openmp
     EnvSetupScript: setup_env.bat
     buildArch: x64
     msbuildPlatform: arm
     packageName: arm
-    buildparameter: --arm --use_openmp
+    buildparameter: --arm ${{ parameters.AdditionalBuildFlags }}
     runTests: false
     build_java: false
 
@@ -187,13 +187,13 @@ jobs:
     IsReleaseBuild: ${{ parameters.IsReleaseBuild }}
     DoCompliance: ${{ parameters.DoCompliance }}
     DoEsrp: ${{ parameters.DoEsrp }}
-    OrtNugetPackageId: 'Microsoft.ML.OnnxRuntime'
+    OrtNugetPackageId: ${{ parameters.OrtNugetPackageId }}
     job_name_suffix: arm64_openmp
     EnvSetupScript: setup_env.bat
     buildArch: x64
     msbuildPlatform: arm64
     packageName: arm64
-    buildparameter: --arm64 --use_openmp
+    buildparameter: --arm64 ${{ parameters.AdditionalBuildFlags }}
     runTests: false
     build_java: false
 
@@ -202,13 +202,13 @@ jobs:
     IsReleaseBuild: ${{ parameters.IsReleaseBuild }}
     DoCompliance: ${{ parameters.DoCompliance }}
     DoEsrp: ${{ parameters.DoEsrp }}
-    OrtNugetPackageId: 'Microsoft.ML.OnnxRuntime'
+    OrtNugetPackageId: ${{ parameters.OrtNugetPackageId }}
     job_name_suffix: x64_openmp
     EnvSetupScript: setup_env.bat
     buildArch: x64
     msbuildPlatform: x64
     packageName: x64
-    buildparameter: --build_java --use_openmp
+    buildparameter: --build_java ${{ parameters.AdditionalBuildFlags }}
     runTests: ${{ parameters.RunOnnxRuntimeTests }}
     build_java: true
 
@@ -480,7 +480,7 @@ jobs:
   - name: GDN_CODESIGN_TARGETDIRECTORY
     value: '$(Build.BinariesDirectory)/nuget-artifact/final-package'
   pool: 'Win-CPU-2019'
-  condition: and (succeeded(), and (${{ parameters.DoEsrp }}, eq(variables['Build.SourceBranch'], 'refs/heads/master')))
+  #condition: and (succeeded(), and (${{ parameters.DoEsrp }}, eq(variables['Build.SourceBranch'], 'refs/heads/master')))
   dependsOn:
   - NuGet_Test_Win
   - NuGet_Test_Linux
@@ -510,7 +510,7 @@ jobs:
     displayName: 'Copy Signed Native NuGet Package to Blob Store'
     condition: ne(variables['IsReleaseBuild'], 'true') # release build has a different package naming scheme
     inputs:
-      sourcePath: '$(Build.BinariesDirectory)/nuget-artifact/final-package/Microsoft.ML.OnnxRuntime.$(NuGetPackageVersionNumber).nupkg'
+      sourcePath: '$(Build.BinariesDirectory)/nuget-artifact/final-package/${{ parameters.OrtNugetPackageId }}.$(NuGetPackageVersionNumber).nupkg'
       azureSubscription: 'AIInfraBuildOnnxRuntimeOSS'
       destination: azureBlob
       storage: ortpackages
@@ -535,7 +535,7 @@ jobs:
     condition: ne(variables['IsReleaseBuild'], 'true') # release build has a different package naming scheme
     inputs:
       command: 'push'
-      searchPatternPush: '$(Build.BinariesDirectory)/nuget-artifact/final-package/Microsoft.ML.OnnxRuntime.$(NuGetPackageVersionNumber).nupkg'
+      searchPatternPush: '$(Build.BinariesDirectory)/nuget-artifact/final-package/${{ parameters.OrtNugetPackageId }}.$(NuGetPackageVersionNumber).nupkg'
       feedPublish: 'OnnxRuntime'
 
   - task: DotNetCoreCLI@2
@@ -551,7 +551,7 @@ jobs:
     condition: ne(variables['IsReleaseBuild'], 'true') # release build has a different package naming scheme
     inputs:
       command: 'push'
-      packagesToPush: '$(Build.BinariesDirectory)/nuget-artifact/final-package/Microsoft.ML.OnnxRuntime.$(NuGetPackageVersionNumber).nupkg'
+      packagesToPush: '$(Build.BinariesDirectory)/nuget-artifact/final-package/${{ parameters.OrtNugetPackageId }}.$(NuGetPackageVersionNumber).nupkg'
       publishVstsFeed: '2692857e-05ef-43b4-ba9c-ccf1c22c437c/7982ae20-ed19-4a35-a362-a96ac99897b7'
 
   - task: NuGetCommand@2
