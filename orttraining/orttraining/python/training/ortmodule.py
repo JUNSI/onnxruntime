@@ -55,18 +55,14 @@ def _get_default_device_str(type):
     else:
         return 'cpu'
 
-def _create_iobinding(io_binding, inputs, kwargs, model, device):
+def _create_iobinding(io_binding, inputs, model, device):
     '''Creates IO binding for a `model` inputs and output'''
     for idx, value_info in enumerate(model.graph.input):
-        if idx < len(inputs):
-            inp = inputs[idx]
-        else:
-            inp = kwargs[value_info.name]
-        io_binding.bind_input(value_info.name, inp.device.type,
-                              _get_device_index(inp.device),
-                              _utils.dtype_torch_to_numpy(inp.dtype),
-                              list(inp.size()),
-                              inp.data_ptr())
+        io_binding.bind_input(value_info.name, inputs[idx].device.type,
+                              _get_device_index(inputs[idx].device),
+                              _utils.dtype_torch_to_numpy(inputs[idx].dtype),
+                              list(inputs[idx].size()),
+                              inputs[idx].data_ptr())
 
     for value_info in model.graph.output:
         io_binding.bind_output(value_info.name, device.type,
@@ -95,7 +91,7 @@ def _ort_output_to_torch_tensor(ort_output):
 class ORTModule(torch.nn.Module):
 
     def __init__(self, module):
-        assert isinstance(module, torch.nn.Module), "'module' mst be a torch.nn.Module"
+        assert isinstance(module, torch.nn.Module), "'module' must be a torch.nn.Module"
         super(ORTModule, self).__init__()
 
         self._export_again = False
@@ -242,6 +238,10 @@ class ORTModule(torch.nn.Module):
             def forward(ctx, *inputs, **kwargs):
                 '''Performs forward pass based on user input and PyTorch initializer
 
+                Autograd Function's apply() doesn't support keyword arguments,
+                so `*inputs` has all the arguments - keyword arguments converted
+                to positional by the caller.
+
                 Model outputs are returned to the user
                 The following tensors are stashed (in order) for backward pass
                     * (Partial) user input
@@ -250,7 +250,7 @@ class ORTModule(torch.nn.Module):
                 '''
 
                 # Use IO binding
-                _create_iobinding(self._forward_io_binding, inputs, kwargs,
+                _create_iobinding(self._forward_io_binding, inputs,
                                   self._onnx_forward,
                                   self._device)
 
@@ -259,7 +259,7 @@ class ORTModule(torch.nn.Module):
                 forward_outputs = self._forward_io_binding.get_outputs()
 
                 # Stash tensors needed by backward
-                forward_input_dict = self._convert_forward_inputs_to_dict(inputs, kwargs)
+                forward_input_dict = self._convert_forward_input_list_to_dict(*inputs)
                 ctx_inputs = tuple(forward_input_dict[name] \
                     for name in self._onnx_graphs_info.backward_user_input_names)
                 ctx_initializers = tuple(forward_input_dict[name] \
@@ -331,21 +331,14 @@ class ORTModule(torch.nn.Module):
         return result
 
     @_utils.timeit(enabled=__TEMP_ENABLE_METHOD_TIMING__)
-    def _convert_forward_inputs_to_dict(self, inputs, kwargs):
-        '''Convert forward inputs to dict
-
+    def _convert_forward_input_list_to_dict(self, *inputs):
+        '''Convert forward `*inputs` list to dict
         TODO: Input gradient is being ignored for MVP
         '''
         # Dictionary containing both inputs and initializers
         forward_input_names = [*self._onnx_graphs_info.user_input_names,
                                *self._onnx_graphs_info.initializer_names_to_train]
-        inputs_dict = {}
-        for i in range(len(inputs)):
-            inputs_dict[forward_input_names[i]] = inputs[i]
-        for k, v in kwargs.items():
-            if k in forward_input_names:
-                inputs_dict[k] = v
-        return inputs_dict
+        return dict(zip(forward_input_names, inputs))
 
     @_utils.timeit(enabled=__TEMP_ENABLE_METHOD_TIMING__)
     def _convert_backward_input_list_to_dict(self, *inputs):
@@ -405,6 +398,7 @@ class ORTModule(torch.nn.Module):
 
         # Deepcopy inputs, since input values may change after model run.
         sample_inputs_copy = copy.deepcopy(inputs)
+        sample_kwargs_copy = copy.deepcopy(kwargs)
 
         # Ignore optional *inputs explicitly specified as None
         sig = signature(module.forward)
@@ -429,7 +423,7 @@ class ORTModule(torch.nn.Module):
 
         # Export torch.nn.Module to ONNX
         torch.onnx.export(module,
-                          tuple(sample_inputs_copy + (kwargs, )),
+                          tuple(sample_inputs_copy + (sample_kwargs_copy, )),
                           f,
                           input_names=input_names,
                           opset_version=ONNX_OPSET_VERSION,
